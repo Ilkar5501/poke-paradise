@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "description": "Discord bot for Pokémon battles and utilities",
   "type": "module",
-  "main": "src/index.js",
+  "main": "src/server.js",          // ← change
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/server.js"   // ← change
   },
   "dependencies": {
     "discord.js": "^14.14.1",
     "node-fetch": "^3.3.2",
-    "dotenv": "^16.4.3"
+    "dotenv": "^16.4.3",
+    "express": "^4.19.2"            // ← NEW
   }
 }
