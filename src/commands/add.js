@@ -6,12 +6,11 @@ import { getPokemon } from '../utils/pokedex.js';
 import { calcStats } from '../utils/calc.js';
 
 /* ---------- defaults ---------- */
-const stats = calcStats(
-  base.baseStats,
-  DEFAULTS.level,
-  DEFAULTS.ivs,
-  DEFAULTS.nature
-);
+const DEFAULTS = {
+  level: 100,
+  nature: 'hardy',
+  ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 }
+};
 
 /**
  * Capitalizes the first letter of each type (e.g., "steel" -> "Steel")
@@ -33,15 +32,17 @@ export default {
     const base = getPokemon(inter.options.getString('query').toLowerCase());
     if (!base) return inter.reply('❌ Pokémon not found.');
 
-    /* enforce 50‑mon cap */
+    /* Enforce 50‑mon cap */
     const count = db.prepare(`
       SELECT COUNT(*) AS c FROM pokemon WHERE owner_id = ?
     `).get(inter.user.id).c;
     if (count >= 50)
       return inter.reply('❌ Your inventory is full (50).');
 
-    /* create new instance */
+    /* Create new instance */
     const instId = crypto.randomUUID().slice(0, 8);
+    const ivs = { ...DEFAULTS.ivs }; // Guaranteed 31 in every IV
+
     db.prepare(`
       INSERT INTO pokemon
         (instance_id, owner_id, dex_name, level, ivs, nature, moves)
@@ -51,7 +52,7 @@ export default {
       inter.user.id,
       base.name,
       DEFAULTS.level,
-      JSON.stringify(DEFAULTS.ivs),
+      JSON.stringify(ivs),
       DEFAULTS.nature,
       '[]'  // empty moves
     );
@@ -70,14 +71,7 @@ export default {
     }
 
     // Corrected Stat Calculation with Base Stats
-    const stats = calcStats(
-      base.baseStats,
-      DEFAULTS.level,
-      DEFAULTS.ivs,
-      DEFAULTS.nature
-    );
-
-    // Capitalize Pokémon Types
+    const stats = calcStats(base.baseStats, DEFAULTS.level, ivs, DEFAULTS.nature);
     const types = capitalizeTypes(base.types);
 
     const embed = new EmbedBuilder()
@@ -85,12 +79,12 @@ export default {
       .setThumbnail(base.sprite)
       .addFields(
         { name: 'Type', value: types.join(' | '), inline: false },
-        { name: 'HP', value: `${stats.hp} (IV: 31/31)`, inline: true },
-        { name: 'ATTACK', value: `${stats.atk} (IV: 31/31)`, inline: true },
-        { name: 'DEFENSE', value: `${stats.def} (IV: 31/31)`, inline: true },
-        { name: 'SP_ATTACK', value: `${stats.spa} (IV: 31/31)`, inline: true },
-        { name: 'SP_DEFENSE', value: `${stats.spd} (IV: 31/31)`, inline: true },
-        { name: 'SPEED', value: `${stats.spe} (IV: 31/31)`, inline: true },
+        { name: 'HP', value: `${stats.hp} (IV: ${ivs.hp}/31)`, inline: true },
+        { name: 'ATTACK', value: `${stats.atk} (IV: ${ivs.atk}/31)`, inline: true },
+        { name: 'DEFENSE', value: `${stats.def} (IV: ${ivs.def}/31)`, inline: true },
+        { name: 'SP_ATTACK', value: `${stats.spa} (IV: ${ivs.spa}/31)`, inline: true },
+        { name: 'SP_DEFENSE', value: `${stats.spd} (IV: ${ivs.spd}/31)`, inline: true },
+        { name: 'SPEED', value: `${stats.spe} (IV: ${ivs.spe}/31)`, inline: true },
         { name: 'Nature', value: DEFAULTS.nature, inline: false }
       )
       .setColor(0x27e2a4);
