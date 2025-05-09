@@ -4,17 +4,11 @@ import { getPokemon } from '../utils/pokedex.js';
 
 export default {
   data: new SlashCommandBuilder()
-    .setName('learn')
-    .setDescription('Teach your active Pokémon a new move')
-    .addStringOption(o =>
-      o.setName('move')
-       .setDescription('Move name (must be a valid damaging move)')
-       .setRequired(true)),
+    .setName('moves')
+    .setDescription('Show all learnable damaging moves for your active Pokémon'),
 
   async execute(inter) {
-    const move = inter.options.getString('move').toLowerCase();
-
-    /* find active Pokémon */
+    // Check if the user has a selected Pokémon
     const sel = db.prepare(`
       SELECT active_pokemon FROM users WHERE discord_id = ?
     `).get(inter.user.id);
@@ -27,25 +21,14 @@ export default {
     `).get(sel.active_pokemon);
 
     const base = getPokemon(row.dex_name);
-    if (!base.moves.includes(move))
-      return inter.reply(`❌ **${move}** is not a valid damaging move for ${base.name}.`);
+    if (!base)
+      return inter.reply('❌ Error: Base Pokémon data not found.');
 
-    /* update moves list (FIFO if full) */
-    const moves = JSON.parse(row.moves);
-    if (!Array.isArray(moves)) return inter.reply('❌ Error: Moves list corrupted.');
-
-    if (moves.length >= 4) moves.shift();  // remove oldest
-    moves.push(move);
-
-    db.prepare(`
-      UPDATE pokemon SET moves = ? WHERE instance_id = ?
-    `).run(JSON.stringify(moves), row.instance_id);
-
-    /* show updated list */
     const embed = new EmbedBuilder()
-      .setTitle(`${base.name.toUpperCase()} — Updated Moves`)
-      .setDescription(moves.length ? moves.join(', ') : 'None')
-      .setColor(0x4caf50);
+      .setTitle(`${base.name.toUpperCase()} — Learnable Moves`)
+      .setDescription(base.moves.length ? base.moves.join(', ') : 'None')
+      .setColor(0x4caf50)
+      .setThumbnail(base.sprite);
 
     inter.reply({ embeds: [embed] });
   }
