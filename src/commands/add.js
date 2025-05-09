@@ -1,3 +1,4 @@
+// src/commands/add.js
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import crypto from 'crypto';
 import db from '../db.js';
@@ -33,15 +34,16 @@ export default {
     const instId = crypto.randomUUID().slice(0, 8);
     db.prepare(`
       INSERT INTO pokemon
-        (instance_id, owner_id, dex_name, level, ivs, nature)
-      VALUES (?, ?, ?, ?, ?, ?)
+        (instance_id, owner_id, dex_name, level, ivs, nature, moves)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       instId,
       inter.user.id,
       base.name,
       DEFAULTS.level,
       JSON.stringify(DEFAULTS.ivs),
-      DEFAULTS.nature
+      DEFAULTS.nature,
+      '[]'  // empty moves
     );
 
     /* If this is their first Pokémon, auto-select it */
