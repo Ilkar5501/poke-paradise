@@ -6,11 +6,12 @@ import { getPokemon } from '../utils/pokedex.js';
 import { calcStats } from '../utils/calc.js';
 
 /* ---------- defaults ---------- */
-const DEFAULTS = {
-  level: 100,
-  nature: 'hardy',
-  ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 }
-};
+const stats = calcStats(
+  base.baseStats,
+  DEFAULTS.level,
+  DEFAULTS.ivs,
+  DEFAULTS.nature
+);
 
 /**
  * Capitalizes the first letter of each type (e.g., "steel" -> "Steel")
