@@ -1,35 +1,44 @@
+// src/commands/info.js
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import db from '../db.js';
+import { getPokemon } from '../utils/pokedex.js';
+import { calcStats } from '../utils/calc.js';
 
 export default {
   data: new SlashCommandBuilder()
-    .setName('inventory')
-    .setDescription('Show all Pokémon you own (max 50)'),
+    .setName('info')
+    .setDescription('View stats for your currently selected Pokémon'),
 
   async execute(inter) {
-    // Fetch all Pokémon the user owns
-    const mons = db.prepare(`
-      SELECT instance_id, dex_name 
-      FROM pokemon 
-      WHERE owner_id = ?
-      LIMIT 50
-    `).all(inter.user.id);
+    const sel = db.prepare(`
+      SELECT active_pokemon FROM users WHERE discord_id = ?
+    `).get(inter.user.id);
 
-    if (!mons.length) {
-      return inter.reply('📭 Your inventory is empty. Use `/add` to create a Pokémon!');
-    }
+    if (!sel)
+      return inter.reply('❌ You haven’t selected a Pokémon (`/select`).');
 
-    // Display format: ID | Name | Nickname (nickname feature can be added later)
-    const displayList = mons.map(
-      (mon, index) => `ID: \`${mon.instance_id}\` | Name: ${mon.dex_name}`
-    ).join('\n');
+    const row = db.prepare(`
+      SELECT * FROM pokemon WHERE instance_id = ?
+    `).get(sel.active_pokemon);
+
+    const base = getPokemon(row.dex_name);
+    if (!base)
+      return inter.reply('❌ Error: Base Pokémon data not found.');
+
+    const ivs = JSON.parse(row.ivs);
+    const stats = calcStats(base.baseStats, row.level, ivs, row.nature);
 
     const embed = new EmbedBuilder()
-      .setTitle(`${inter.user.username} — Inventory (${mons.length}/50)`)
-      .setColor(0x80cafa)
-      .setDescription(displayList);
+      .setTitle(`${row.dex_name} (ID: ${row.instance_id})`)
+      .setDescription(`Level ${row.level} "${row.dex_name}"`)
+      .addFields(
+        { name: 'Types', value: base.types.join(' | '), inline: false },
+        ...Object.entries(stats).map(([k, v]) =>
+          ({ name: k.toUpperCase(), value: `${v} (IV: ${ivs[k]}/31)`, inline: true }))
+      )
+      .setThumbnail(base.sprite)
+      .setColor(0x27e2a4);
 
     inter.reply({ embeds: [embed] });
   }
 };
-
