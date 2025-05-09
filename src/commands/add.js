@@ -7,10 +7,19 @@ import { calcStats } from '../utils/calc.js';
 
 /* ---------- defaults ---------- */
 const DEFAULTS = {
-  level  : 100,
-  nature : 'hardy',
-  ivs    : { hp:31, atk:31, def:31, spa:31, spd:31, spe:31 }
+  level: 100,
+  nature: 'hardy',
+  ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 }
 };
+
+/**
+ * Capitalizes the first letter of each type (e.g., "steel" -> "Steel")
+ * @param {string[]} types - List of Pokémon types
+ * @returns {string[]} - Capitalized types
+ */
+function capitalizeTypes(types) {
+  return types.map(type => type.charAt(0).toUpperCase() + type.slice(1));
+}
 
 export default {
   data: new SlashCommandBuilder()
@@ -59,17 +68,29 @@ export default {
       `).run(inter.user.id, instId);
     }
 
-    /* build stats for the embed */
-    const stats = calcStats(base.baseStats, DEFAULTS.level, DEFAULTS.ivs, DEFAULTS.nature);
+    // Corrected Stat Calculation with Base Stats
+    const stats = calcStats(
+      base.baseStats,
+      DEFAULTS.level,
+      DEFAULTS.ivs,
+      DEFAULTS.nature
+    );
+
+    // Capitalize Pokémon Types
+    const types = capitalizeTypes(base.types);
 
     const embed = new EmbedBuilder()
-      .setTitle(`Added ${base.name.toUpperCase()} (ID ${instId})`)
+      .setTitle(`Added ${base.name.toUpperCase()} (ID ${instId})`)
       .setThumbnail(base.sprite)
       .addFields(
-        { name: 'Type', value: base.types.join(' | '), inline: false },
-        ...Object.entries(stats).map(([k, v]) =>
-          ({ name: k.toUpperCase(), value: String(v), inline: true })),
-        { name: 'Nature', value: DEFAULTS.nature, inline: true }
+        { name: 'Type', value: types.join(' | '), inline: false },
+        { name: 'HP', value: `${stats.hp} (IV: 31/31)`, inline: true },
+        { name: 'ATTACK', value: `${stats.atk} (IV: 31/31)`, inline: true },
+        { name: 'DEFENSE', value: `${stats.def} (IV: 31/31)`, inline: true },
+        { name: 'SP_ATTACK', value: `${stats.spa} (IV: 31/31)`, inline: true },
+        { name: 'SP_DEFENSE', value: `${stats.spd} (IV: 31/31)`, inline: true },
+        { name: 'SPEED', value: `${stats.spe} (IV: 31/31)`, inline: true },
+        { name: 'Nature', value: DEFAULTS.nature, inline: false }
       )
       .setColor(0x27e2a4);
 
