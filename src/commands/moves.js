@@ -1,3 +1,4 @@
+// src/commands/moves.js
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import db from '../db.js';
 import { getPokemon } from '../utils/pokedex.js';
@@ -33,10 +34,10 @@ export default {
 
     // Collect move details from moves.json
     const detailedMoves = base.moves
-      .filter(move => moveData[move]) // Only include moves that exist in moves.json
+      .filter(move => moveData[move.toLowerCase()]) // Case-insensitive
       .map(move => {
-        const md = moveData[move];
-        return `${move} | ${md.power} Power | ${md.accuracy}% Accuracy | ${md.type} | ${md.category.charAt(0).toUpperCase() + md.category.slice(1)}`;
+        const md = moveData[move.toLowerCase()];
+        return `**${move.toUpperCase()}** | 💥 **BP:** ${md.power} | 🎯 **${md.accuracy}%** | ${md.type} | **\`${md.category === 'physical' ? 'PHYS' : 'SPEC'}\`**`;
       })
       .sort((a, b) => a.localeCompare(b)); // Sort alphabetically
 
