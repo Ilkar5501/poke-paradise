@@ -1,8 +1,11 @@
-// src/commands/info.js
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import db from '../db.js';
-import { getPokemon } from '../utils/pokedex.js';
-import { calcStats } from '../utils/calc.js';
+import { getPokemon, calcStats } from '../utils/pokedex.js';
+
+/* Utility: Capitalizes Pokémon types */
+function capitalizeTypes(types) {
+  return types.map(type => type.charAt(0).toUpperCase() + type.slice(1));
+}
 
 export default {
   data: new SlashCommandBuilder()
@@ -27,16 +30,22 @@ export default {
 
     const ivs = JSON.parse(row.ivs);
     const stats = calcStats(base.baseStats, row.level, ivs, row.nature);
+    const types = capitalizeTypes(base.types);
 
     const embed = new EmbedBuilder()
-      .setTitle(`${row.dex_name} (ID: ${row.instance_id})`)
+      .setTitle(`${base.name.toUpperCase()} (ID: ${row.instance_id})`)
       .setDescription(`Level ${row.level} "${row.dex_name}"`)
-      .addFields(
-        { name: 'Types', value: base.types.join(' | '), inline: false },
-        ...Object.entries(stats).map(([k, v]) =>
-          ({ name: k.toUpperCase(), value: `${v} (IV: ${ivs[k]}/31)`, inline: true }))
-      )
       .setThumbnail(base.sprite)
+      .addFields(
+        { name: 'Types', value: types.join(' | '), inline: false },
+        { name: 'HP', value: `${stats.hp} (IV: ${ivs.hp}/31)`, inline: true },
+        { name: 'ATTACK', value: `${stats.atk} (IV: ${ivs.atk}/31)`, inline: true },
+        { name: 'DEFENSE', value: `${stats.def} (IV: ${ivs.def}/31)`, inline: true },
+        { name: 'SP_ATTACK', value: `${stats.spa} (IV: ${ivs.spa}/31)`, inline: true },
+        { name: 'SP_DEFENSE', value: `${stats.spd} (IV: ${ivs.spd}/31)`, inline: true },
+        { name: 'SPEED', value: `${stats.spe} (IV: ${ivs.spe}/31)`, inline: true },
+        { name: 'Nature', value: row.nature, inline: true }
+      )
       .setColor(0x27e2a4);
 
     inter.reply({ embeds: [embed] });
