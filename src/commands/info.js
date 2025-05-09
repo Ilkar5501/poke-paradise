@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import db from '../db.js';
-import { getPokemon, calcStats } from '../utils/pokedex.js';
+import { getPokemon } from '../utils/pokedex.js';
+import { calcStats } from '../utils/calc.js';
 
 /* Utility: Capitalizes Pokémon types */
 function capitalizeTypes(types) {
@@ -28,7 +29,14 @@ export default {
     if (!base)
       return inter.reply('❌ Error: Base Pokémon data not found.');
 
+    // Ensure IVs exist
     const ivs = JSON.parse(row.ivs);
+    const ivFields = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
+    ivFields.forEach(stat => {
+      if (typeof ivs[stat] === 'undefined') ivs[stat] = 31; // Default to 31 IV
+    });
+
+    // Calculate stats using calcStats
     const stats = calcStats(base.baseStats, row.level, ivs, row.nature);
     const types = capitalizeTypes(base.types);
 
@@ -44,7 +52,7 @@ export default {
         { name: 'SP_ATTACK', value: `${stats.spa} (IV: ${ivs.spa}/31)`, inline: true },
         { name: 'SP_DEFENSE', value: `${stats.spd} (IV: ${ivs.spd}/31)`, inline: true },
         { name: 'SPEED', value: `${stats.spe} (IV: ${ivs.spe}/31)`, inline: true },
-        { name: 'Nature', value: row.nature, inline: true }
+        { name: 'Nature', value: row.nature, inline: false }
       )
       .setColor(0x27e2a4);
 
