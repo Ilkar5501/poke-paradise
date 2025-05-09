@@ -1,8 +1,7 @@
 // src/utils/pokedex.js
 import { readFileSync } from 'fs';
-import { NATURES } from './nature.js';
 
-/* Load all Pokémon data from pokedex.json */
+// Load all Pokémon data from pokedex.json
 const data = JSON.parse(readFileSync('data/pokedex.json'));
 
 /* Quick lookup maps (by name and by Dex ID) */
@@ -12,37 +11,33 @@ export const byId = Object.fromEntries(
 );
 
 /**
- * Retrieves a Pokémon by name or Dex number.
- * @param {string} q - Name or Dex number.
- * @returns {object|null} - Pokémon data.
+ * Fetches a Pokémon entry by name, using intuitive matching
+ * @param {string} query - The Pokémon name or dex number (user input)
+ * @returns {object|null} - The matched Pokémon object
  */
-export function getPokemon(q) {
-  q = q.toLowerCase();
-  return byName[q] || byId[q] || null;
+export function getPokemon(query) {
+  // Normalize the query (remove special characters, lowercase)
+  const normalizedQuery = query
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')  // Remove non-letter/non-digit characters
+    .replace(/\s+/g, ' ')         // Replace multiple spaces with one
+    .trim();
+
+  // Direct lookup by name or ID
+  if (byName[normalizedQuery]) return byName[normalizedQuery];
+  if (byId[normalizedQuery]) return byId[normalizedQuery];
+
+  // Attempt to match by intuitive name (forms)
+  const formNames = Object.keys(byName).filter(name => {
+    const cleanName = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, ' ') // Convert to the same normalized format
+      .trim();
+    return cleanName === normalizedQuery;
+  });
+
+  if (formNames.length > 0) return byName[formNames[0]];
+
+  // If no match is found
+  return null;
 }
-
-/**
- * Calculates the full stats of a Pokémon based on its base stats, level, IVs, and nature.
- * @param {object} base - Base stats of the Pokémon (HP, Atk, Def, SpA, SpD, Spe).
- * @param {number} lvl - Pokémon level (always 100 in this bot).
- * @param {object} ivs - IV values for each stat (0-31).
- * @param {string} nature - Nature of the Pokémon (affects stats).
- * @returns {object} - Calculated stats (HP, Atk, Def, SpA, SpD, Spe).
- */
-export const calcStats = (base, lvl, ivs, nature) => {
-  const nMod = NATURES[nature] || {};
-  const iv4 = 63;     // floor(252 / 4) → EVs are fixed at 252 per stat
-
-  const out = {};
-  for (const [stat, b] of Object.entries(base)) {
-    if (stat === 'hp') {
-      out.hp = Math.floor(((2 * b + ivs.hp + iv4) * lvl) / 100) + lvl + 10;
-    } else {
-      let val = Math.floor(((2 * b + ivs[stat] + iv4) * lvl) / 100) + 5;
-      if (nMod[stat] === 1)  val = Math.floor(val * 1.1);   // boosted
-      if (nMod[stat] === -1) val = Math.floor(val * 0.9);   // lowered
-      out[stat] = val;
-    }
-  }
-  return out;
-};
