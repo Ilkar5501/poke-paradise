@@ -2,30 +2,42 @@
 import { NATURES } from './nature.js';
 
 /* EVs are fixed at 252 per stat → iv4 = 63 */
-const iv4 = 63; // 252 EVs / 4 = 63
+const iv4 = Math.floor(252 / 4); // 63
 
 /**
- * Calculates Pokémon stats
+ * Calculates Pokémon stats using the standard formula
  * @param {object} base - Base stats of the Pokémon
- * @param {number} lvl - Pokémon level
+ * @param {number} level - Pokémon level
  * @param {object} ivs - Individual Values (IVs)
  * @param {string} nature - Pokémon nature
  * @returns {object} - Calculated stats
  */
-export const calcStats = (base, lvl, ivs, nature) => {
-  const nMod = NATURES[nature] || {};
-  const out = {};
+export const calcStats = (base, level, ivs, nature) => {
+  const nMod = NATURES[nature.toLowerCase()] || {}; // Get nature modifiers
+  const stats = {};
 
-  for (const [stat, b] of Object.entries(base)) {
+  for (const [stat, baseValue] of Object.entries(base)) {
     if (stat === 'hp') {
-      out.hp = Math.floor(((2 * b + ivs.hp + iv4) * lvl) / 100) + lvl + 10;
+      // HP is calculated differently
+      stats.hp = Math.floor(((2 * baseValue + ivs.hp + iv4) * level) / 100) + level + 10;
     } else {
-      let val = Math.floor(((2 * b + ivs[stat] + iv4) * lvl) / 100) + 5;
-      if (nMod[stat] === 1) val = Math.floor(val * 1.1);   // boosted
-      if (nMod[stat] === -1) val = Math.floor(val * 0.9);  // lowered
-      out[stat] = val;
+      // Non-HP stats
+      let value = Math.floor(((2 * baseValue + ivs[stat] + iv4) * level) / 100) + 5;
+
+      // Apply nature modifier (if any)
+      if (nMod[stat] === 1) value = Math.floor(value * 1.1); // Boosted
+      if (nMod[stat] === -1) value = Math.floor(value * 0.9); // Lowered
+
+      stats[stat] = value;
     }
   }
 
-  return out;
+  return stats;
 };
+
+/**
+ * Example Usage (for testing):
+ * const baseStats = { hp: 100, atk: 120, def: 120, spa: 150, spd: 100, spe: 90 };
+ * const ivs = { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 };
+ * console.log(calcStats(baseStats, 100, ivs, 'hardy'));
+ */
