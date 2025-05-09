@@ -1,4 +1,3 @@
-// src/commands/add.js
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import crypto from 'crypto';
 import db from '../db.js';
@@ -13,7 +12,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName('add')
     .setDescription('Add a Pokémon')
-    .addStringOption(o => o.setName('query').setRequired(true)),
+    .addStringOption(o => o.setName('query').setDescription('Name or Dex #').setRequired(true)),
 
   async execute(inter) {
     const query = inter.options.getString('query').toLowerCase();
