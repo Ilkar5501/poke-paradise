@@ -1,50 +1,49 @@
 // src/utils/calc.js
-import { NATURES } from './nature.js';
+import { NATURES }      from './nature.js';
+import db               from '../db.js';
+import { getPokemon }   from './pokedex.js';
 
-// EV contribution per stat
+// EV contribution per stat (252 EVs max)
 const EV4 = Math.floor(252 / 4);
 
-/**
- * Calculate HP with standard formula
- * @param {{ hp:number }} baseStats
- * @param {number} level
- * @param {{ hp:number }} ivs
- */
-export function calcHP(baseStats, level, ivs) {
-  return Math.floor(((2 * baseStats.hp + ivs.hp + EV4) * level) / 100) + level + 10;
+/** Apply nature modifier */
+function applyMod(value, mod) {
+  if (mod ===  1) return Math.floor(value * 1.1);
+  if (mod === -1) return Math.floor(value * 0.9);
+  return value;
 }
 
-/**
- * Calculate non-HP stat with nature modifier
- * @param {{}} baseStats
- * @param {string} key    // e.g. 'attack', 'sp_attack'
- * @param {number} level
- * @param {{}} ivs
- * @param {function} modFn // function(baseStats, ivs, level) => raw stat before nature
- * @param {number} natureMod
- */
-export function calcOther(baseStats, key, level, ivs, natureMod) {
-  const raw = Math.floor(((2 * baseStats[key] + ivs[key === 'attack'? 'atk'
-    : key === 'defense'? 'def'
-    : key === 'sp_attack'? 'spa'
-    : key === 'sp_defense'? 'spd'
-    : 'spe'] + EV4) * level) / 100) + 5;
-  if (natureMod === 1)  return Math.floor(raw * 1.1);
-  if (natureMod === -1) return Math.floor(raw * 0.9);
-  return raw;
-}
-
-/**
- * Calculate all stats via calcHP & calcOther
- */
+/** Pure stat calc */
 export function calcStats(baseStats, level, ivs, nature) {
   const mods = NATURES[nature.toLowerCase()] || {};
   return {
-    hp : calcHP(baseStats, level, ivs),
-    atk: calcOther(baseStats, 'attack',    level, ivs, mods.attack),
-    def: calcOther(baseStats, 'defense',   level, ivs, mods.defense),
-    spa: calcOther(baseStats, 'sp_attack', level, ivs, mods.sp_attack),
-    spd: calcOther(baseStats, 'sp_defense',level, ivs, mods.sp_defense),
-    spe: calcOther(baseStats, 'speed',     level, ivs, mods.speed)
+    hp: Math.floor(((2*baseStats.hp   + ivs.hp   + EV4)*level)/100) + level + 10,
+    attack:    applyMod(Math.floor(((2*baseStats.attack     + ivs.atk + EV4)*level)/100) + 5, mods.attack),
+    defense:   applyMod(Math.floor(((2*baseStats.defense    + ivs.def + EV4)*level)/100) + 5, mods.defense),
+    sp_attack: applyMod(Math.floor(((2*baseStats.sp_attack  + ivs.spa + EV4)*level)/100) + 5, mods.sp_attack),
+    sp_defense:applyMod(Math.floor(((2*baseStats.sp_defense + ivs.spd + EV4)*level)/100) + 5, mods.sp_defense),
+    speed:     applyMod(Math.floor(((2*baseStats.speed      + ivs.spe + EV4)*level)/100) + 5, mods.speed),
   };
+}
+
+/**
+ * Fetch a Pokémon row by instance_id, combine with pokedex data,
+ * and return { base, ivs, stats } in one call.
+ */
+export function getCalculatedStats(instanceId) {
+  const row = db.prepare(`SELECT * FROM pokemon WHERE instance_id = ?`)
+                .get(instanceId);
+  if (!row) throw new Error(`No Pokémon with ID ${instanceId}`);
+  
+  const base = getPokemon(row.dex_name);
+  if (!base) throw new Error(`Base data not found for ${row.dex_name}`);
+
+  // parse IVs
+  const ivs = JSON.parse(row.ivs);
+  ['hp','atk','def','spa','spd','spe'].forEach(k => {
+    if (typeof ivs[k] !== 'number') ivs[k] = 31;
+  });
+
+  const stats = calcStats(base.baseStats, row.level, ivs, row.nature);
+  return { base, ivs, stats, level: row.level, nature: row.nature };
 }
