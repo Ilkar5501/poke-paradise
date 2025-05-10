@@ -1,3 +1,4 @@
+// src/commands/add.js
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import crypto from 'crypto';
 import db from '../db.js';
@@ -14,17 +15,15 @@ export default {
     ),
 
   async execute(inter) {
-    const q     = inter.options.getString('query').toLowerCase();
+    const q = inter.options.getString('query').toLowerCase();
     const instId = crypto.randomUUID().slice(0,8);
 
-    // Insert with defaults
     db.prepare(`
       INSERT INTO pokemon
         (instance_id, owner_id, dex_name, level, ivs, nature, moves)
       VALUES (?, ?, ?, 100, '{"hp":31,"atk":31,"def":31,"spa":31,"spd":31,"spe":31}', 'hardy', '[]')
     `).run(instId, inter.user.id, q);
 
-    // Auto-select if first
     const existing = db.prepare(
       'SELECT active_pokemon FROM users WHERE discord_id = ?'
     ).get(inter.user.id);
@@ -37,7 +36,6 @@ export default {
       `).run(inter.user.id, instId);
     }
 
-    // Single call to fetch everything and calculate
     const { base, ivs, stats } = getCalculatedStats(instId);
     const types = base.types.map(t => t[0].toUpperCase() + t.slice(1));
 
