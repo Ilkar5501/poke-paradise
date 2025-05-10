@@ -1,12 +1,6 @@
 // src/commands/info.js
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import db from '../db.js';
-import { getPokemon } from '../utils/pokedex.js';
-import { calcStats } from '../utils/calc.js';
-
-function capitalizeTypes(types) {
-  return types.map(t => t.charAt(0).toUpperCase() + t.slice(1));
-}
+import { getCalculatedStats } from '../utils/calc.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -14,41 +8,30 @@ export default {
     .setDescription('View stats for your selected Pokémon'),
 
   async execute(inter) {
-    // Grab user’s active Pokémon in one join
+    // Join users → pokemon inside getCalculatedStats
     const row = db.prepare(`
-      SELECT p.* 
-      FROM pokemon p
-      JOIN users u ON u.active_pokemon = p.instance_id
+      SELECT p.instance_id
+      FROM users u
+      JOIN pokemon p ON p.instance_id = u.active_pokemon
       WHERE u.discord_id = ?
     `).get(inter.user.id);
     if (!row) return inter.reply('❌ No active Pokémon selected.');
 
-    const base = getPokemon(row.dex_name);
-    if (!base) return inter.reply('❌ Base data missing.');
+    const { base, ivs, stats } = getCalculatedStats(row.instance_id);
 
-    // Parse IVs & default missing
-    const ivs = JSON.parse(row.ivs);
-    ['hp','atk','def','spa','spd','spe'].forEach(k => {
-      if (typeof ivs[k] !== 'number') ivs[k] = 31;
-    });
-
-    // Calculate stats via calc.js
-    const stats = calcStats(base.baseStats, row.level, ivs, row.nature);
-
-    // Build embed
-    const types = capitalizeTypes(base.types);
+    const types = base.types.map(t => t[0].toUpperCase() + t.slice(1));
     const embed = new EmbedBuilder()
-      .setTitle(`${base.name.toUpperCase()} (Lv ${row.level})`)
+      .setTitle(`${base.name.toUpperCase()} (Lv ${stats.level || 100})`)
       .setThumbnail(base.sprite)
       .addFields(
-        { name: 'Types',      value: types.join(' | '),           inline: false },
-        { name: 'HP',         value: `${stats.hp} (IV:${ivs.hp}/31)`, inline: true },
-        { name: 'ATTACK',     value: `${stats.atk} (IV:${ivs.atk}/31)`, inline: true },
-        { name: 'DEFENSE',    value: `${stats.def} (IV:${ivs.def}/31)`, inline: true },
-        { name: 'SP_ATTACK',  value: `${stats.spa} (IV:${ivs.spa}/31)`, inline: true },
-        { name: 'SP_DEFENSE', value: `${stats.spd} (IV:${ivs.spd}/31)`, inline: true },
-        { name: 'SPEED',      value: `${stats.spe} (IV:${ivs.spe}/31)`, inline: true },
-        { name: 'Nature',     value: row.nature,                   inline: false }
+        { name: 'Type',       value: types.join(' | '),                       inline: false },
+        { name: 'HP',         value: `${stats.hp} (IV:${ivs.hp}/31)`,         inline: true },
+        { name: 'ATTACK',     value: `${stats.attack} (IV:${ivs.atk}/31)`,     inline: true },
+        { name: 'DEFENSE',    value: `${stats.defense} (IV:${ivs.def}/31)`,    inline: true },
+        { name: 'SP_ATTACK',  value: `${stats.sp_attack} (IV:${ivs.spa}/31)`,  inline: true },
+        { name: 'SP_DEFENSE', value: `${stats.sp_defense} (IV:${ivs.spd}/31)`, inline: true },
+        { name: 'SPEED',      value: `${stats.speed} (IV:${ivs.spe}/31)`,      inline: true },
+        { name: 'Nature',     value: base.nature || 'hardy',                  inline: false }
       )
       .setColor(0x27e2a4);
 
