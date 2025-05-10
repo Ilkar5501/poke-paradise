@@ -1,19 +1,18 @@
 // src/utils/calc.js
-import { NATURES }      from './nature.js';
-import db               from '../db.js';
-import { getPokemon }   from './pokedex.js';
+import { NATURES }    from './nature.js';
+import db             from '../db.js';
+import { getPokemon } from './pokedex.js';
 
 // EV contribution per stat (252 EVs max)
 const EV4 = Math.floor(252 / 4);
 
-/** Apply nature modifier */
 function applyMod(value, mod) {
   if (mod ===  1) return Math.floor(value * 1.1);
   if (mod === -1) return Math.floor(value * 0.9);
   return value;
 }
 
-/** Pure stat calc */
+/** Pure stat calculation */
 export function calcStats(baseStats, level, ivs, nature) {
   const mods = NATURES[nature.toLowerCase()] || {};
   return {
@@ -27,18 +26,17 @@ export function calcStats(baseStats, level, ivs, nature) {
 }
 
 /**
- * Fetch a Pokémon row by instance_id, combine with pokedex data,
- * and return { base, ivs, stats } in one call.
+ * Fetches a Pokémon by instance_id, pulls its baseStats and DB fields,
+ * then returns { base, ivs, stats, level, nature }.
  */
 export function getCalculatedStats(instanceId) {
-  const row = db.prepare(`SELECT * FROM pokemon WHERE instance_id = ?`)
-                .get(instanceId);
+  const row = db.prepare(`SELECT * FROM pokemon WHERE instance_id = ?`).get(instanceId);
   if (!row) throw new Error(`No Pokémon with ID ${instanceId}`);
-  
+
   const base = getPokemon(row.dex_name);
   if (!base) throw new Error(`Base data not found for ${row.dex_name}`);
 
-  // parse IVs
+  // parse IVs JSON and default any missing
   const ivs = JSON.parse(row.ivs);
   ['hp','atk','def','spa','spd','spe'].forEach(k => {
     if (typeof ivs[k] !== 'number') ivs[k] = 31;
