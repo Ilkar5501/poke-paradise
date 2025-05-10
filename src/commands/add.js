@@ -1,4 +1,3 @@
-// src/commands/add.js
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import crypto from 'crypto';
 import db from '../db.js';
@@ -18,31 +17,30 @@ export default {
     const q     = inter.options.getString('query').toLowerCase();
     const instId = crypto.randomUUID().slice(0,8);
 
-    // Persist row with defaults
+    // Insert with defaults
     db.prepare(`
       INSERT INTO pokemon
         (instance_id, owner_id, dex_name, level, ivs, nature, moves)
       VALUES (?, ?, ?, 100, '{"hp":31,"atk":31,"def":31,"spa":31,"spd":31,"spe":31}', 'hardy', '[]')
     `).run(instId, inter.user.id, q);
 
-    // Auto‑select if first
+    // Auto-select if first
     const existing = db.prepare(
       'SELECT active_pokemon FROM users WHERE discord_id = ?'
     ).get(inter.user.id);
     if (!existing) {
       db.prepare(`
         INSERT INTO users (discord_id, active_pokemon)
-          VALUES (?, ?)
+        VALUES (?, ?)
         ON CONFLICT(discord_id) DO UPDATE
           SET active_pokemon = excluded.active_pokemon
       `).run(inter.user.id, instId);
     }
 
-    // One call to get everything
+    // Single call to fetch everything and calculate
     const { base, ivs, stats } = getCalculatedStats(instId);
-
-    // Build embed
     const types = base.types.map(t => t[0].toUpperCase() + t.slice(1));
+
     const embed = new EmbedBuilder()
       .setTitle(`Added ${base.name.toUpperCase()} (ID ${instId})`)
       .setThumbnail(base.sprite)
@@ -54,7 +52,7 @@ export default {
         { name: 'SP_ATTACK',  value: `${stats.sp_attack} (IV:${ivs.spa}/31)`,  inline: true },
         { name: 'SP_DEFENSE', value: `${stats.sp_defense} (IV:${ivs.spd}/31)`, inline: true },
         { name: 'SPEED',      value: `${stats.speed} (IV:${ivs.spe}/31)`,      inline: true },
-        { name: 'Nature',     value: 'hardy',                                  inline: false }
+        { name: 'Nature',     value: base.nature,                             inline: false }
       )
       .setColor(0x27e2a4);
 
