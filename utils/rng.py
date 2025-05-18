@@ -20,7 +20,7 @@ class RNG:
         }
 
     @staticmethod
-    def roll_shiny(chance: float = 1/4096) -> bool:
+    def roll_shiny(chance: float = 1/500) -> bool:
         """Return True if a random roll falls below the shiny chance."""
         return random.random() < chance
 
